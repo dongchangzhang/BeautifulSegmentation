@@ -1,18 +1,19 @@
 import os
-import sys
 import hashlib
 
-sys.path.append("..")
 
-from config.config import *
-
+HERE = os.path.split(os.path.realpath(__file__))[0]
+# last dir
+LAST_DIR = HERE[0:HERE.rfind("/")]
 # model hash if model change we need retrain
-HASH_VALUE = "../config/hash.txt"
+HASH_VALUE = LAST_DIR + "/" + "model/hash.txt"
 # train data location
-TRAIN_SOURCE = "../res/train/cip-data.train"
+TRAIN_SOURCE = LAST_DIR + "/" + "res/train/cip-data.train"
 
-def check_model(d):
-    cm = ModelDiff(d)
+
+def check_model():
+    print("Start checking model...")
+    cm = ModelDiff(LAST_DIR + "/model/")
     return cm.status
 
 
@@ -27,11 +28,12 @@ class ModelDiff:
         self.status = 0
         self.do_check()
 
-    def get_md5(self):
+    def get_md5(self, silence=False):
         md5_tool = hashlib.md5()
         for file in self.list_dir:
-            if not file.endswith("_"):
-                print("hashing: " + file)
+            if not file.endswith("_") and file != HASH_VALUE:
+                if not silence:
+                    print("hashing: " + file)
                 with open(file, "r", encoding='utf-8') as f:
                     while True:
                         b = f.read(8096)
@@ -39,7 +41,6 @@ class ModelDiff:
                             break
                         md5_tool.update(b.encode("utf8"))
         self.hash = md5_tool.hexdigest()
-        print(md5_tool.hexdigest())
 
     def write_hash(self):
         with open(HASH_VALUE, "w") as f:
@@ -47,12 +48,11 @@ class ModelDiff:
 
     def do_check(self):
         try:
-            self.get_md5()
+            self.get_md5(True)
             with open(HASH_VALUE, "r") as f:
                 md5 = f.readline()
-                print(md5)
             if self.hash == md5:
-                print("model not be changed")
+                print("Success!")
             else:
                 print("model changed, need retrain")
                 self.status = -1
@@ -70,5 +70,5 @@ class ModelDiff:
 
 
 if __name__ == "__main__":
-    test = ModelDiff(LAST_DIR + "model/")
+    test = ModelDiff(LAST_DIR + "/model/")
     test.do_check()

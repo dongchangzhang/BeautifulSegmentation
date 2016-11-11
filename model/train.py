@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import os
 import json
 import math
 import codecs
@@ -16,17 +16,41 @@ TPM_JSON = "TransProbMatrix.json"
 # save EmitProbMatrix location in there
 EPM_JSON = "EmitProbMatrix.json"
 # train data location
-TRAIN_SOURCE = "../res/train/cip-data.train"
+TRAIN_SOURCE = "res/train/cip-data.train"
+
+
+def start_train():
+    here = os.path.split(os.path.realpath(__file__))[0]
+    after_mark = here + "/" + AFTER_MARK
+    status_file = here + "/" + STATUS_FILE
+    is_json = here + "/" + IS_JSON
+    tpm_json = here + "/" + TPM_JSON
+    epm_json = here + "/" + EPM_JSON
+    train_source = here[0:here.rfind("/")] + "/" + TRAIN_SOURCE
+    Train(train_source, after_mark, status_file, is_json, tpm_json, epm_json)
+
+
+class Train:
+    def __init__(self, train_source, after_mark, status_file, is_json, tpm_json, epm_json):
+        self.train_source = train_source
+        self.after_mark = after_mark
+        self.status_file = status_file
+        self.is_json = is_json
+        self.tpm_json = tpm_json
+        self.epm_json = epm_json
+
+        self.mark = MarkSample(self.train_source, self.after_mark, self.status_file)
+        self.mark.train()
+        self.statistics = Statistics(self.after_mark, self.status_file, self.epm_json, self.tpm_json, self.is_json)
+        self.statistics.run()
 
 
 class MarkSample:
     def __init__(self,
-                 train_file,
-                 out_file=AFTER_MARK,
-                 out_file2=STATUS_FILE):
+                 train_file, after_mark, status_file):
         self.f = open(train_file, "r")
-        self.of = open(out_file, "w")
-        self.of2 = open(out_file2, "w")
+        self.of = open(after_mark, "w")
+        self.of2 = open(status_file, "w")
 
     def train(self):
 
@@ -66,25 +90,20 @@ class MarkSample:
 
 
 class Statistics:
-    def __init__(self,
-                 in_file=AFTER_MARK,
-                 in_file2=STATUS_FILE,
-                 out_file=EPM_JSON,
-                 out_file2=TPM_JSON,
-                 out_file3=IS_JSON):
+    def __init__(self, after_mark, status_file, epm_json, tpm_json, is_json):
 
         self.letters = 0
-        with open(in_file, 'r') as f:
+        with open(after_mark, 'r') as f:
             for line in f:
                 for letter in line:
                     if letter not in ["B", "M", "E", "S", "\t", "\n", " "]:
                         self.letters += 1
 
-        self.inf = open(in_file, "r")
-        self.inf2 = open(in_file2, "r")
-        self.of = codecs.open(out_file, "w", "utf-8")
-        self.of2 = codecs.open(out_file2, "w", "utf-8")
-        self.of3 = codecs.open(out_file3, "w", "utf-8")
+        self.inf = open(after_mark, "r")
+        self.inf2 = open(status_file, "r")
+        self.of = codecs.open(epm_json, "w", "utf-8")
+        self.of2 = codecs.open(tpm_json, "w", "utf-8")
+        self.of3 = codecs.open(is_json, "w", "utf-8")
         self.epm_dic = {}
         self.is_dic = {"B": 0, "M": 0, "E": 0, "S": 0}
         self.tpm_dic = {}
@@ -135,15 +154,15 @@ class Statistics:
     def tidy_up(self):
         for d in self.epm_dic:
             for key in self.epm_dic[d]:
-                self.epm_dic[d][key] = math.log2(float(self.epm_dic[d][key]) / self.letters)
+                self.epm_dic[d][key] = math.log10(float(self.epm_dic[d][key]) / self.letters)
         for key in self.is_dic:
             if self.is_dic[key] == 0:
                 self.is_dic[key] = -3.14e+100
             else:
-                self.is_dic[key] = math.log2(float(self.is_dic[key]) / self.letters)
+                self.is_dic[key] = math.log10(float(self.is_dic[key]) / self.letters)
         for d in self.tpm_dic:
             for key in self.tpm_dic[d]:
-                self.tpm_dic[d][key] = math.log2(float(self.tpm_dic[d][key]) / self.letters)
+                self.tpm_dic[d][key] = math.log10(float(self.tpm_dic[d][key]) / self.letters)
 
     def close(self):
         self.inf2.close()
@@ -151,18 +170,6 @@ class Statistics:
         self.of.close()
         self.of2.close()
         self.of3.close()
-
-
-class Train:
-    def __init__(self):
-        self.mark = MarkSample(TRAIN_SOURCE)
-        self.mark.train()
-        self.statistics = Statistics()
-        self.statistics.run()
-
-
-def start_train():
-    Train()
 
 
 if __name__ == "__main__":
