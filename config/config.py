@@ -2,19 +2,21 @@ import os
 import platform
 
 # location of here
-here = os.getcwd()
+HERE = os.getcwd()
 # parent node location
-loc = here.rfind('/') + 1
+loc = HERE.rfind('/') + 1
 # the project location
-ROOT = here[0:loc]
+LAST_DIR = HERE[0:loc]
 # train data answer location
-ANS_LOCATION = ROOT + "res/ans/"
+ANS_LOCATION = LAST_DIR + "res/ans/"
 # dict location
-DICT_LOCATION = ROOT + "res/dict/"
+DICT_LOCATION = LAST_DIR + "res/dict/"
 # test data location
-TEST_LOCATION = ROOT + "res/test/"
-# train data location
-TRAIN_LOCATION = ROOT + "res/train/cip-data.train"
+TEST_LOCATION = LAST_DIR + "res/test/"
+
+
+
+
 
 # os type
 MY_OS = platform.system()
