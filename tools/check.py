@@ -28,7 +28,7 @@ class ModelDiff:
         self.status = 0
         self.do_check()
 
-    def get_md5(self, silence=False):
+    def get_md5(self, silence=True):
         md5_tool = hashlib.md5()
         for file in self.list_dir:
             if not file.endswith("_") and file != HASH_VALUE:
@@ -52,6 +52,7 @@ class ModelDiff:
             with open(HASH_VALUE, "r") as f:
                 md5 = f.readline()
             if self.hash == md5:
+                self.status = 0
                 print("Success!")
             else:
                 print("model changed, need retrain")
@@ -61,7 +62,6 @@ class ModelDiff:
 
         except IOError:
             print("files not be hashed...")
-            self.status = -1
             self.get_md5()
             self.write_hash()
 

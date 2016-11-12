@@ -5,6 +5,7 @@ import math
 import codecs
 
 
+MIN = -3.14e+100
 # marked file : XBXMXMXE ....
 AFTER_MARK = "letter_mark.txt"
 # all status char will be put in this file by order
@@ -67,7 +68,6 @@ class MarkSample:
         self.of.write("\n")
 
     def mark_word(self, word):
-
         if len(word) == 1 or len(word) == 2 and word[1] == "\n":
             self.of.write("\t" + word[0] + "S")
             self.of2.write("S")
@@ -93,6 +93,8 @@ class Statistics:
     def __init__(self, after_mark, status_file, epm_json, tpm_json, is_json):
 
         self.letters = 0
+        self.little = 0
+        self.percent = 0
         with open(after_mark, 'r') as f:
             for line in f:
                 for letter in line:
@@ -114,7 +116,7 @@ class Statistics:
             for letter in line:
                 if letter in ["B", "S"]:
                     self.is_dic[letter] += 1
-                    break;
+                    break
             self.do_statistics(line)
 
         # TransProbMatrix
@@ -132,7 +134,6 @@ class Statistics:
         self.of.write(json.dumps(self.epm_dic, ensure_ascii=False))
         self.of2.write(json.dumps(self.tpm_dic, ensure_ascii=False))
         self.of3.write(json.dumps(self.is_dic, ensure_ascii=False))
-
         self.close()
 
     def do_statistics(self, sentence):
@@ -152,17 +153,33 @@ class Statistics:
                     self.epm_dic[key] = {value: 1}
 
     def tidy_up(self):
+
         for d in self.epm_dic:
             for key in self.epm_dic[d]:
-                self.epm_dic[d][key] = math.log10(float(self.epm_dic[d][key]) / self.letters)
+                if self.epm_dic[d][key] < 8:
+                    self.little += self.epm_dic[d][key]
+        self.percent = float(self.little) / self.letters
+
+        for d in self.epm_dic:
+            for key in ["B", "M", "E", "S"]:
+                if key in self.epm_dic[d]:
+                    self.epm_dic[d][key] = math.log10((1 - self.percent) * float(self.epm_dic[d][key]) / self.letters)
+                else:
+                    self.epm_dic[d][key] = math.log10(float(3) / self.letters)
+        self.epm_dic["NONE"] = math.log10(float(5) / self.letters)
+
         for key in self.is_dic:
             if self.is_dic[key] == 0:
                 self.is_dic[key] = -3.14e+100
             else:
                 self.is_dic[key] = math.log10(float(self.is_dic[key]) / self.letters)
+
         for d in self.tpm_dic:
-            for key in self.tpm_dic[d]:
-                self.tpm_dic[d][key] = math.log10(float(self.tpm_dic[d][key]) / self.letters)
+            for key in["B", "M", "E", "S"]:
+                if key in self.tpm_dic[d]:
+                    self.tpm_dic[d][key] = math.log10(float(self.tpm_dic[d][key]) / self.letters)
+                else:
+                    self.tpm_dic[d][key] = MIN
 
     def close(self):
         self.inf2.close()
