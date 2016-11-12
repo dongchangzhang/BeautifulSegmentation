@@ -1,1 +1,5 @@
 *.txt linguist-language=python
+*.train linguist-language=python
+*.1 linguist-language=python
+*.2 linguist-language=python
+
