@@ -154,19 +154,19 @@ class Statistics:
 
     def tidy_up(self):
 
-        for d in self.epm_dic:
-            for key in self.epm_dic[d]:
-                if self.epm_dic[d][key] < 8:
-                    self.little += self.epm_dic[d][key]
-        self.percent = float(self.little) / self.letters
+        # for d in self.epm_dic:
+        #     for key in self.epm_dic[d]:
+        #         if self.epm_dic[d][key] < 8:
+        #             self.little += self.epm_dic[d][key]
+        # self.percent = float(self.little) / self.letters
 
         for d in self.epm_dic:
             for key in ["B", "M", "E", "S"]:
                 if key in self.epm_dic[d]:
-                    self.epm_dic[d][key] = math.log10((1 - self.percent) * float(self.epm_dic[d][key]) / self.letters)
+                    self.epm_dic[d][key] = math.log10(float(self.epm_dic[d][key]) / self.letters)
                 else:
                     self.epm_dic[d][key] = math.log10(float(3) / self.letters)
-        self.epm_dic["NONE"] = math.log10(float(5) / self.letters)
+        self.epm_dic["NONE"] = math.log10(float(3) / self.letters)
 
         for key in self.is_dic:
             if self.is_dic[key] == 0:

@@ -1,5 +1,5 @@
 import sys
-import multiprocessing
+import time
 from PyQt4 import QtCore, QtGui
 from model.train import start_train
 from tools.check import check_model
@@ -7,12 +7,13 @@ from split.split import split_file
 from split.split import split_sentence
 
 
-
-
 class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
-
+        # file line numbers
+        self.pbar = None
+        self.lines = 0
+        # init
         super(MainWindow, self).__init__(parent)
         self.setWindowTitle("中文分词")
         self.resize(800, 500)
@@ -21,10 +22,9 @@ class MainWindow(QtGui.QMainWindow):
         widget = QtGui.QWidget()
         layout = QtGui.QVBoxLayout(widget)
         layout.addWidget(self.win_widget)
-
         self.setCentralWidget(widget)
         # status bar
-        self.statusBar().showMessage('Ready')
+        self.statusBar().showMessage("就绪")
         # toolbar
         self.toolbar = self.addToolBar('Exit')
         # menu bar
@@ -32,46 +32,47 @@ class MainWindow(QtGui.QMainWindow):
         self.file = menu_bar.addMenu('&File')
         open = self.file.addAction('Open')
         self.connect(open, QtCore.SIGNAL('triggered()'), self.on_open)
-
         save = self.file.addAction('Save')
         self.connect(save, QtCore.SIGNAL('triggered()'), self.on_save)
         self.file.addSeparator()
         close = self.file.addAction("Close")
         self.connect(close, QtCore.SIGNAL('triggered()'), self.on_close)
+        # when text changed do action
+        self.connect(self.win_widget.text_input, QtCore.SIGNAL('textChanged(QString)'), self.onChanged)
 
-        # check = self.win_widget.text_input.addAction('Check')
-        # self.connect(check, QtCore.SIGNAL('triggered()'), self.OnClose)
-        # check = self.win_widget.text_input.addAction("Check")
-        # self.connect(check, QtCore.SIGNAL('triggered()'), self.hah)
-
-        # self.connect( self.win_widget.text_input, QtCore.SIGNAL('valueChanged'), QtCore.SLOT('self.hah()'))
-        # self.win_widget.text_input.textChanged()
-
-        # self.toolbar = self.addToolBar('Exit')
-        # self.toolbar.addAction(exitAction)
-        # self.key = self.keyboardGrabber()
-        # self.key.customEvent()
-
-        self.connect(self.win_widget.text_input, QtCore.SIGNAL('textChanged(QString)'),
-                     self.onChanged)
-
-        self.setWindowIcon (QtGui.QIcon('logo.png'))
+        self.setWindowIcon(QtGui.QIcon('logo.png'))
         self.show()
 
     def on_open(self):
         file = QtGui.QFileDialog.getOpenFileName(self, 'Open')
         try:
-            with open(file, "r") as f:
-                result = ""
-                self.setWindowTitle(file)
-                self.statusBar().showMessage("Working!")
-                for line in f:
-                    result += split_sentence(line) + "\n"
-                self.win_widget.text_show.setText(result)
-                self.statusBar().showMessage("Finished!")
+            # add progress bar
+            self.pbar = QtGui.QProgressBar(self)
+            self.statusBar().clearMessage()
+            self.statusBar().addWidget(self.pbar)
+            self.pbar.setMinimum(0)
+            self.pbar.setMaximum(100)
+            self.lines = self.getlines(file)
+            # do thread function
+            self.bwThread = Work(file)
+            # 连接子进程的信号和槽函数
+            self.bwThread.finishSignal.connect(self.BigWorkEnd)
+            self.bwThread.status_signal.connect(self.status_bar)
+            # 开始执行 run() 函数里的内容
+            self.bwThread.start()
 
         except:
-            self.statusBar().showMessage("can not open!")
+            self.statusBar().showMessage("Error!")
+
+    def BigWorkEnd(self, ls):
+        self.win_widget.text_show.setText(ls)
+        self.statusBar().removeWidget(self.pbar)
+        self.statusBar().showMessage("就绪")
+    def status_bar(self, times):
+
+        self.pbar.setValue(100 * float(times) / self.lines)
+        # self.statusBar().showMessage(str(100 * float(times) / self.lines) + "%")
+
 
     def on_save(self):
         self.show_result()
@@ -87,7 +88,10 @@ class MainWindow(QtGui.QMainWindow):
         result = split_sentence(self.win_widget.text_input.toPlainText())
         self.win_widget.text_show.setText(result)
         self.statusBar().showMessage(self.win_widget.text_input.toPlainText())
-
+    def getlines(self, file):
+        with open(file, "r") as f:
+            l = list(f)
+        return len(l)
     def onChanged(self, text):
         if text == "":
             self.win_widget.text_show.setText("")
@@ -112,6 +116,30 @@ class WinWidget (QtGui.QWidget) :
 
         self.setLayout(grid_layout)
 
+
+class Work(QtCore.QThread):
+
+    finishSignal = QtCore.pyqtSignal(str)
+    status_signal = QtCore.pyqtSignal(str)
+
+    def __init__(self ,file ,parent=None):
+        super(Work, self).__init__(parent)
+        #储存参数
+        self.file = file
+
+    def run(self):
+        print("here")
+        try:
+            with open(self.file, "r") as f:
+                result = ""
+                i = 0
+                for line in f:
+                    result += split_sentence(line) + "\n"
+                    i += 1
+                    self.status_signal.emit(str(i))
+            self.finishSignal.emit(result)
+        except:
+            print("Error")
 
 def main():
 

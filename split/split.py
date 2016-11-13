@@ -154,4 +154,4 @@ class Spliter:
 if __name__ == "__main__":
     test = Spliter()
     test.split_for_sentence("张东昌拔出宝剑")
-    test.split_for_file("../res/test/judge.data.2")
+    test.split_for_file("../res/test/judge.data.1")
