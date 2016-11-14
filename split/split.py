@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import shutil
 
 # here
 HERE = os.path.split(os.path.realpath(__file__))[0]
@@ -14,24 +15,41 @@ IS_JSON = LAST_DIR + "/model/InitStatus.json"
 TPM_JSON = LAST_DIR + "/model/TransProbMatrix.json"
 # save EmitProbMatrix location in there
 EPM_JSON = LAST_DIR + "/model/EmitProbMatrix.json"
+# save TransProbMatrix2 location in there
+TPM_JSON2 = LAST_DIR + "/model/TransProbMatrix2.json"
+# save EmitProbMatrix2 location in there
+EPM_JSON2 = LAST_DIR + "/model/EmitProbMatrix2.json"
+#
+DICT_BIG_JSON = LAST_DIR + "/model/dict.big.json"
+DICT_SMALL_JSON = LAST_DIR + "/model/dict.small.json"
+# tmp
+TMP_FILE = HERE + "/tmp/tmp.txt"
 
 MIN = -3.14e+100
 
+status = 0
 
-def split_file(*files):
+
+def split_file(file):
     spliter = Spliter()
-    spliter.split_for_file(files)
+    spliter.split_for_file(file)
 
 
 def split_sentence(sentence):
     spliter = Spliter()
     return spliter.split_for_sentence(sentence)
 
+
+def get_status():
+    return status
+
+
 class Spliter:
     def __init__(self):
         self.is_dic = {}
         self.tpm_dic = {}
         self.epm_dic = {}
+        self.mark = {0: "B", 1: "M", 2: "E", 3: "S"}
         with open(IS_JSON, "r") as f:
             self.is_dic = json.load(f)
         with open(TPM_JSON, "r") as f:
@@ -39,19 +57,21 @@ class Spliter:
         with open(EPM_JSON, "r") as f:
             self.epm_dic = json.load(f)
 
-    def split_for_file(self, *files):
-        for file in files:
-            try:
-                with open(file, "r") as f:
-                    with open(OUT_DIR + file[file.rfind("/"):] + ".out.txt", "w") as out:
-                        for sentence in f:
-                            out.write(self.split_for_sentence(sentence) + "\n")
-            except:
-                print("Not find file: " + file)
+    def split_for_file(self, file):
+        global status
+        try:
+            with open(file, "r") as f:
+                out_file = OUT_DIR + file[file.rfind("/"):] + ".out.txt"
+                with open(out_file, "w") as out:
+                    for sentence in f:
+                        status += 1
+                        out.write(self.split_for_sentence(sentence) + "\n")
+                shutil.copy(out_file, TMP_FILE)
+        except:
+            print("Not find file: " + file)
 
     def split_for_sentence(self, sentence):
         # to prepare
-        mark = {0: "B", 1: "M", 2: "E", 3: "S"}
         sentence_len = len(sentence)
         weight = [([MIN] * sentence_len) for i in range(0, 4)]
         path = [([-1] * sentence_len) for i in range(0, 4)]
@@ -62,7 +82,8 @@ class Spliter:
                 "B": self.epm_dic["NONE"],
                 "M": MIN,
                 "E": MIN,
-                "S": self.epm_dic["NONE"],}
+                "S": self.epm_dic["NONE"]
+            }
         else:
             value = {
                 "B": self.epm_dic[sentence[0]]["B"],
@@ -86,9 +107,9 @@ class Spliter:
                 path[j][i] = -1
                 for k in range(0, 4):
                     if sentence[i] not in self.epm_dic:
-                        tmp = weight[k][i - 1] + self.tpm_dic[mark[k]][mark[j]] + self.epm_dic["NONE"]
+                        tmp = weight[k][i - 1] + self.tpm_dic[self.mark[k]][self.mark[j]] + self.epm_dic["NONE"]
                     else:
-                        tmp = weight[k][i-1] + self.tpm_dic[mark[k]][mark[j]] + self.epm_dic[sentence[i]][mark[j]]
+                        tmp = weight[k][i-1] + self.tpm_dic[self.mark[k]][self.mark[j]] + self.epm_dic[sentence[i]][self.mark[j]]
                     if tmp > weight[j][i]:
                         weight[j][i] = tmp
                         path[j][i] = k
@@ -101,21 +122,12 @@ class Spliter:
             back_point = 3
 
         rmark_result = ""
-        # print(weight[0])
-        # print(weight[1])
-        # print(weight[2])
-        # print(weight[3])
-        #
-        # print(path[0])
-        # print(path[1])
-        # print(path[2])
-        # print(path[3])
-        # back up
+
         for i in range(0, sentence_len - 1):
 
-            rmark_result += mark[back_point]
+            rmark_result += self.mark[back_point]
             back_point = path[back_point][sentence_len - 1 - i]
-        rmark_result += mark[back_point]
+        rmark_result += self.mark[back_point]
         mark_result = rmark_result[::-1]
 
         return self.get_result(sentence, mark_result)
@@ -151,7 +163,143 @@ class Spliter:
 
         return "\t".join(format_list)
 
+class Spliter3(Spliter):
+    def __init__(self):
+        super(Spliter3, self).__init__()
+        with open(TPM_JSON2, "r") as f:
+            self.tpm_dic2 = json.load(f)
+        with open(EPM_JSON2, "r") as f:
+            self.epm_dic2 = json.load(f)
+
+    def split_for_sentence(self, sentence):
+        # to prepare
+        sentence_len = len(sentence)
+        weight = [[([MIN] * sentence_len) for i in range(0, 4)] for j in range(0, 4)]
+        path = [[([-1] * sentence_len) for i in range(0, 4)] for j in range(0, 4)]
+        # init weight
+        for i in range(0, 4):
+            for j in range(0, 4):
+                try:
+                    a = self.epm_dic[j][sentence[0]]
+                except:
+                    a = self.is_dic["NONE"]
+                try:
+                    b = self.epm_dic[j][i][sentence[1]]
+                except:
+                    b = self.is_dic["NONE"]
+                try:
+                    c = self.tpm_dic[j][i]
+                except:
+                    c = self.is_dic["NONE"]
+
+                weight[j][i][1] = self.is_dic[self.mark[j]] + a + b + c
+        # every word
+        # weight[i][j][x] last status; now status; the word
+        for i in range(2, sentence_len):
+            # every may status
+            for j in range(0, 4):
+                # every last char status
+                for k in range(0, 4):
+                    # every last last status
+                    for l in range(0, 4):
+                        try:
+                            a = self.tpm_dic2[self.mark[l]][self.mark[k]][self.mark[j]]
+                        except:
+                            a = self.is_dic["NONE"]
+                        try:
+                            b = self.epm_dic2[self.mark[l]][self.mark[k]][sentence[i]]
+                        except:
+                            b = self.is_dic["NONE"]
+
+                        tmp = weight[l][k][i - 1] + a + b
+
+                    if tmp > weight[k][j][i]:
+                        weight[k][j][i] = tmp
+                        path[k][j][i] = l
+
+        # find max end
+        tmp = MIN
+        # now
+        end_i = 0
+        # last
+        end_j = 0
+        for i in range(0, 4):
+            for j in range(0, 4):
+
+                if weight[j][i][sentence_len - 1] > tmp:
+                    tmp = weight[j][i][sentence_len - 1]
+                    end_i = i
+                    end_j = j
+
+
+        # back
+        rmark_result = ""
+        rmark_result += self.mark[end_i]
+        rmark_result += self.mark[end_j]
+        for i in range(0, sentence_len - 2):
+            # + now
+            tmp = path[end_j][end_i][sentence_len - i - 1]
+            rmark_result += self.mark[tmp]
+            # get last
+            end_i = end_j
+            end_j = tmp
+        print(rmark_result[::-1])
+
+
+class DictSpliter:
+    def __init__(self, dict_big_file, dict_small_file):
+        self.re_han = re.compile(u"([\u4E00-\u9FA5a-zA-Z0-9+#&\._]+)", re.U)
+        self.graph = {}
+        with open(dict_big_file, "r") as f:
+            self.word_dict_big = json.load(f)
+        with open(dict_small_file, "r") as f:
+            self.word_dict_small = json.load(f)
+
+    def deal_sentence(self, sentence):
+        original_sentence = self.re_han.findall(sentence)
+        result = ""
+        for sen in original_sentence:
+            result += self.deal_final_sentence(sen) + "/"
+        return result
+
+    def deal_final_sentence(self, sentence):
+        result = ""
+        sen_len = len(sentence)
+        for i in range(0, sen_len):
+            location = sen_len - i - 1
+            if location not in self.graph:
+                self.graph[location] = {}
+            times = 0
+            tmp = location
+            pos = location
+            dict_tmp = self.word_dict_small
+            while tmp < sen_len:
+                if sentence[tmp] in dict_tmp:
+                    if "TIMES" in dict_tmp[sentence[tmp]]:
+                        times = dict_tmp[sentence[tmp]]["TIMES"]
+                        pos = tmp
+                    dict_tmp = dict_tmp[sentence[tmp]]
+                    tmp += 1
+
+                else:
+                    break
+
+            self.graph[location][pos] = times
+        # deal graph
+        print(self.graph)
+        mark = [-1] * sen_len
+        dijkstra = [[i, -1, 0] for i in range(0, sen_len)]
+        for i in range(0, sen_len):
+            for j in self.graph[i]:
+                dijkstra[j][2] = self.graph[i][j]
+                dijkstra[j][1] = i
+        print(dijkstra)
+        return result
+
+
 if __name__ == "__main__":
-    test = Spliter()
-    test.split_for_sentence("张东昌拔出宝剑")
-    test.split_for_file("../res/test/judge.data.1")
+    # test = Spliter3()
+    # test.split_for_sentence("清华大学")
+    # # test.split_for_file("/home/me/GitHub/ChineseWS/res/test/judge.data.1")
+    test = DictSpliter(DICT_BIG_JSON, DICT_SMALL_JSON)
+    test.deal_sentence("刘挺拔出宝剑")
