@@ -68,6 +68,9 @@ DICT_STOP_JSON = os.path.join(MODEL_DIR, 'dict.stop.json')
 TMP_FILE = os.path.join('tmp', 'tmp.txt')
 # model hash if model change we need retrain
 HASH_VALUE = os.path.join(MODEL_DIR, 'hash.txt')
+# icons
+ICONS = os.path.join(RESOURCE_DIR, 'icon.svg')
+
 
 
 

@@ -7,7 +7,7 @@ from check import check_model
 from split import get_status
 from split import split_file
 from split import split_sentence
-from constant import TMP_FILE
+from constant import TMP_FILE, ICONS
 
 class MainWindow(QtGui.QMainWindow):
     """main window"""
@@ -40,7 +40,7 @@ class MainWindow(QtGui.QMainWindow):
         # when text changed do action
         self.connect(self.win_widget.text_input, QtCore.SIGNAL('textChanged(QString)'), self.on_changed)
 
-        self.setWindowIcon(QtGui.QIcon('res/icon.svg'))
+        self.setWindowIcon(QtGui.QIcon(ICONS))
         self.show()
 
     def on_open(self):
