@@ -2,12 +2,12 @@ import sys
 import time
 import threading
 from PyQt4 import QtCore, QtGui
-from model.train import start_train
-from tools.check import check_model
-from split.split import get_status
-from split.split import split_file
-from split.split import split_sentence
-
+from train import start_train
+from check import check_model
+from split import get_status
+from split import split_file
+from split import split_sentence
+from constant import TMP_FILE
 
 class MainWindow(QtGui.QMainWindow):
     """main window"""
@@ -115,7 +115,7 @@ class DealFile(QtCore.QThread):
     def deal_file(self):
         try:
             split_file(self.file)
-            with open("split/tmp/tmp.txt", "r") as f:
+            with open(TMP_FILE, "r") as f:
                 result = f.readlines()
             self.finishSignal.emit("".join(result))
         except:

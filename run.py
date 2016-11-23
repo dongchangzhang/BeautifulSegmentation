@@ -1,7 +1,7 @@
-from model.train import start_train
-from tools.check import check_model
-from split.split import split_file
-from split.split import split_sentence
+from train import start_train
+from check import check_model
+from split import split_file
+from split import split_sentence
 
 
 class BeautifulSegmentation:
