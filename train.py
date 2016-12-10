@@ -1,78 +1,89 @@
 #!/usr/bin/env python3
+import re
 import os
 import json
 import math
 import codecs
 from constant import *
 
+TRAIN_FILES = os.listdir(TRAIN_SOURCES)
+TRAIN_FILES_LIST = [os.path.join(TRAIN_SOURCES, x) for x in TRAIN_FILES]
 
 def start_train():
     Train()
 
-
 class Train:
     def __init__(self):
-
-        self.mark = MarkSample()
-        self.mark.train()
         # dict
         self.dic_dealer = DictDealer()
-        # hmm2
+         # hmm2
+        self.mark = MarkSample()
+        self.mark.train()
         self.statistics = Statistics()
         self.statistics.run()
-        # hmm3
-        self.statistics2 = StatisticsHMM2()
-        self.statistics2.run()
-
-
+  
 class DictDealer:
     def __init__(self):
+        self.r = re.compile(r'([^\s]*)[\s\t]+([\d]*)')
         self.word_dict = {}
         self.deal_files = [
-            (DICT_BIG_SOURCE, DICT_BIG_JSON),
-            (DICT_SMALL_SOURCE, DICT_SMALL_JSON)
+            DICT_BIG_SOURCE,
+            DICT_SMALL_SOURCE,
+            DICT_OTHER_SOURCE,
+            DICT_IDF_SOURCE,
         ]
-        self.dict_stop = DICT_STOP_SOURCE
-        self.dict_stop_json = DICT_STOP_JSON
+        self.outf = DICT_BIG_JSON
 
-        for files in self.deal_files:
-            print(files[0])
-            self.word_dict = {}
-            with open(files[0], "r") as f:
+        self.deal_files_small = [
+            DICT_OTHER_SOURCE,
+            DICT_SMALL_SOURCE,
+        ]
+
+        self.outf_small = DICT_SMALL_JSON
+
+        self.deal_files_test = [
+            DICT_OTHER_SOURCE,
+        ]
+        self.outf_test = DICT_TEST_JSON
+
+        # deal big
+        self.deal_dict(self.deal_files, self.outf)
+        # deal small
+        self.deal_dict(self.deal_files_small, self.outf_small)
+         # deal test
+        self.deal_dict(self.deal_files_test, self.outf_test)
+
+    def deal_dict(self, files, out):
+        self.word_dict = {}
+
+        print('start deal dict...')
+        for file in files:
+            print('dealing', file)
+            with open(file, 'r') as f:
                 for line in f:
-                    self.deal_word(line)
-            with open(files[1], "w") as f:
-                f.write(json.dumps(self.word_dict, ensure_ascii=False))
-
-        with open(self.dict_stop, "r") as f:
-            self.word_dict = {}
-            for line in f:
-                self.word_dict[line[:-1]] = 1
-        with open(self.dict_stop_json, "w") as f:
+                    rg = self.r.match(line)
+                    self.word_dict[rg.group(1)] = rg.group(2)
+        print('saving dict to', out)
+        with open(out, 'w') as f:
             f.write(json.dumps(self.word_dict, ensure_ascii=False))
-
-    def deal_word(self, line):
-        r_list = line[0: -1].split(" ")
-        dict_tmp = self.word_dict
-        for ch in r_list[0]:
-            if ch not in dict_tmp:
-                dict_tmp[ch] = {}
-            dict_tmp = dict_tmp[ch]
-        dict_tmp["TIMES"] = math.log2(float(r_list[1]))
-
 
 
 class MarkSample:
     """mark train file for every char """
     def __init__(self):
-        self.f = open(TRAIN_SOURCE, "r")
+
         self.of = open(AFTER_MARK, "w")
         self.of2 = open(STATUS_FILE, "w")
 
     def train(self):
-
-        for line in self.f:
-            self.deal_sentence(line)
+        print('training hmm model...')
+        for file in TRAIN_FILES_LIST:
+            print('dealing', file)
+            with open(file, 'r') as f:
+                for line in f:
+                    if line[-1] == '\n' or line[-1] == '\t':
+                        line = line[:-1]
+                    self.deal_sentence(line)
 
         self.close()
 
@@ -87,6 +98,8 @@ class MarkSample:
         if len(word) == 1 or len(word) == 2 and word[1] == "\n":
             self.of.write("\t" + word[0] + "S")
             self.of2.write("S")
+        elif len(word) == 1 and word == '\n':
+            pass
         elif len(word) == 2:
             self.of.write("\t" + word[0] + "B" + word[1] + "E")
             self.of2.write("BE")
@@ -100,7 +113,6 @@ class MarkSample:
             self.of2.write("E")
 
     def close(self):
-        self.f.close()
         self.of.close()
         self.of2.close()
 
@@ -158,6 +170,7 @@ class Statistics:
         for word in wlist:
             if len(word) > 0 and word[-1] == "\n":
                 word = word[0:-1]
+
             for i in range(0, len(word), 2):
                 key = word[i]
                 value = word[i + 1]
@@ -205,96 +218,6 @@ class Statistics:
         self.of.close()
         self.of2.close()
         self.of3.close()
-
-
-class StatisticsHMM2(Statistics):
-    """hmm 3"""
-    def __init__(self):
-        self.letters = 0
-        self.little = 0
-        self.percent = 0
-        with open(AFTER_MARK, 'r') as f:
-            for line in f:
-                for letter in line:
-                    if letter not in ["B", "M", "E", "S", "\t", "\n", " "]:
-                        self.letters += 1
-        self.inf = open(AFTER_MARK, "r")
-        self.inf2 = open(STATUS_FILE, "r")
-        self.of4 = codecs.open(EPM_JSON2, "w", "utf-8")
-        self.of5 = codecs.open(TPM_JSON2, "w", "utf-8")
-        self.tpm_dic2 = {}
-        self.epm_dic2 = {}
-
-    def run(self):
-        # EmitProbMatrix && InitStatus
-        for line in self.inf:
-            self.do_statistics(line)
-        # TransProbMatrix
-
-        tlist = list(self.inf2)
-        tstr = tlist[0]
-        for i in range(0, len(tstr) - 2):
-
-            # read second status
-            # t[i] {"A":?}
-            # t[i][j] {"A":{"A":?}}
-            # t[i][j][k] {"A" :{"A" : {"A"}}}
-            if tstr[i] in self.tpm_dic2:
-                if tstr[i + 1] not in self.tpm_dic2[tstr[i]]:
-                    self.tpm_dic2[tstr[i]][tstr[i + 1]] = {}
-            else:
-                self.tpm_dic2[tstr[i]] = {}
-                self.tpm_dic2[tstr[i]][tstr[i + 1]] = {}
-
-            # read second status
-            if tstr[i + 2] in self.tpm_dic2[tstr[i]][tstr[i + 1]]:
-                self.tpm_dic2[tstr[i]][tstr[i + 1]][tstr[i + 2]] += 1
-            else:
-                self.tpm_dic2[tstr[i]][tstr[i + 1]][tstr[i + 2]] = 1
-        self.tidy_up()
-        self.of4.write(json.dumps(self.epm_dic2, ensure_ascii=False))
-        self.of5.write(json.dumps(self.tpm_dic2, ensure_ascii=False))
-
-        self.close()
-
-    def do_statistics(self, sentence):
-        wlist = sentence.split("\t")
-        sentence = "".join(wlist)
-        if len(sentence) > 0 and sentence[-1] == "\n":
-            sentence = sentence[0:-1]
-        for i in range(2, len(sentence), 2):
-            key = sentence[i - 1]
-            key1 = sentence[i + 1]
-            value = sentence[i]
-
-            if key in self.epm_dic2:
-                if key1 in self.epm_dic2[key]:
-                    if value in self.epm_dic2[key][key1]:
-                        self.epm_dic2[key][key1][value] += 1
-                    else:
-                        self.epm_dic2[key][key1][value] = 1
-                else:
-                    self.epm_dic2[key][key1] = {value: 1}
-            else:
-                self.epm_dic2[key] = {key1: {value: 1}}
-
-    def tidy_up(self):
-        for key1 in self.epm_dic2:
-            for key2 in self.epm_dic2[key1]:
-                for key3 in self.epm_dic2[key1][key2]:
-                    self.epm_dic2[key1][key2][key3] = math.log2(float(self.epm_dic2[key1][key2][key3]) / self.letters)
-        self.epm_dic2["NONE"] = math.log2(float(0.1) / self.letters)
-
-        for key1 in self.tpm_dic2:
-            for key2 in self.tpm_dic2[key1]:
-                for key3 in self.tpm_dic2[key1][key2]:
-                        self.tpm_dic2[key1][key2][key3] = math.log2(float(self.tpm_dic2[key1][key2][key3]) / self.letters)
-
-    def close(self):
-        self.inf.close()
-        self.inf2.close()
-        self.of4.close()
-        self.of5.close()
 
 
 if __name__ == "__main__":

@@ -27,9 +27,15 @@ RES_DICT = 'dict'
 # one thing can not happened
 MIN = -3.14e+100
 
+# the max match length for longest in long mode
+MAX_LEN_L = 8
+# the max match length for longest in short mode
+MAX_LEN_S = 4 
+
 # sample
 # train data location
 TRAIN_SOURCE = os.path.join(RESOURCE_DIR, RES_TRAIN, 'cip-data.train')
+TRAIN_SOURCES = os.path.join(RESOURCE_DIR, RES_TRAIN)
 # mark train data and save in there
 AFTER_MARK = os.path.join(MODEL_DIR, 'letter_mark.txt')
 # all status char will be put in this file by order
@@ -43,26 +49,20 @@ TPM_JSON = os.path.join(MODEL_DIR, 'TransProbMatrix.json')
 # save EmitProbMatrix location in there
 EPM_JSON = os.path.join(MODEL_DIR, 'EmitProbMatrix.json')
 
-# hmm2
-# save TransProbMatrix in there
-TPM_JSON2 = os.path.join(MODEL_DIR, 'TransProbMatrix2.json')
-# save EmitProbMatrix  in there
-EPM_JSON2 = os.path.join(MODEL_DIR, 'EmitProbMatrix2.json')
-
 
 # dict
 # dict big source
 DICT_BIG_SOURCE = os.path.join(RESOURCE_DIR, RES_DICT, 'dict.txt.big')
-# save dict big
-DICT_BIG_JSON = os.path.join(MODEL_DIR, 'dict.big.json')
 # dict small
 DICT_SMALL_SOURCE = os.path.join(RESOURCE_DIR, RES_DICT, 'dict.txt.small')
-# save dict small
+# dict other source
+DICT_OTHER_SOURCE = os.path.join(RESOURCE_DIR, RES_DICT, 'dict.txt.other')
+# dict other source
+DICT_IDF_SOURCE = os.path.join(RESOURCE_DIR, RES_DICT, 'dict.txt.idf')
+# save
+DICT_BIG_JSON = os.path.join(MODEL_DIR, 'dict.big.json')
 DICT_SMALL_JSON = os.path.join(MODEL_DIR, 'dict.small.json')
-# dict stop source
-DICT_STOP_SOURCE = os.path.join(RESOURCE_DIR, RES_DICT, 'stop_words.txt')
-# save stop big
-DICT_STOP_JSON = os.path.join(MODEL_DIR, 'dict.stop.json')
+DICT_TEST_JSON = os.path.join(MODEL_DIR, 'dict.test.json')
 
 # tmp
 TMP_FILE = os.path.join('tmp', 'tmp.txt')
@@ -70,6 +70,18 @@ TMP_FILE = os.path.join('tmp', 'tmp.txt')
 HASH_VALUE = os.path.join(MODEL_DIR, 'hash.txt')
 # icons
 ICONS = os.path.join(RESOURCE_DIR, 'icon.svg')
+
+# test files
+FOR_TEST1= os.path.join(RESOURCE_DIR, 'test', 'judge.data.1')
+FOR_TEST2= os.path.join(RESOURCE_DIR, 'test', 'judge.data.2')
+
+# test ans
+TEST1= os.path.join(RESOURCE_DIR, 'ans', 'judge.data.ans.1')
+TEST2= os.path.join(RESOURCE_DIR, 'ans', 'judge.data.ans.2')
+
+# result
+JUDGE1= os.path.join('out', 'judge.data.1.out.txt')
+JUDGE2= os.path.join('out', 'judge.data.2.out.txt')
 
 
 
